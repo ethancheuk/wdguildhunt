@@ -24,7 +24,7 @@ model, preprocess = load_model()
 def load_database_images():
     image_folder = Path("images")
     image_folder.mkdir(exist_ok=True)
-    paths = list(image_folder.glob("*.jpg")) + list(image_folder.glob("*.png")) + list(image_folder.glob("*.jpeg"))
+    paths = list(image_folder.glob("*.[jJ][pP][gG]")) + list(image_folder.glob("*.[pP][nN][gG]")) + list(image_folder.glob("*.[jJ][pP][eE][gG]"))
     return paths
 
 db_paths = load_database_images()
