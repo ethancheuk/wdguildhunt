@@ -12,7 +12,7 @@ st.title("🖼️ 相似圖片搜尋")
 @st.cache_resource
 def load_model():
     model, _, preprocess = open_clip.create_model_and_transforms(
-        'ViT-B-32', pretrained='openai'
+        'ViT-L-14', pretrained='openai'
     )
     model.eval()
     return model, preprocess
