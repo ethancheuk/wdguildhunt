@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 
 st.set_page_config(page_title="唔俾咪口小廢廢用", layout="wide")
-st.title("📍 格子物品位置比對")
+st.title("唔俾咪口小廢廢用")
 
 def load_images():
     folder = Path("images")
