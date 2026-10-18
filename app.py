@@ -1,101 +1,81 @@
 import streamlit as st
-import torch
-import open_clip
-from PIL import Image
+import cv2
 import numpy as np
+from PIL import Image
 from pathlib import Path
 
-st.set_page_config(page_title="相似圖片搜尋", layout="wide")
-st.title("🖼️ 相似圖片搜尋（切格版）")
+st.set_page_config(page_title="位置比對", layout="wide")
+st.title("📍 圖片位置比對（非 AI）")
 
-# 載入模型
-@st.cache_resource
-def load_model():
-    model, _, preprocess = open_clip.create_model_and_transforms(
-        'ViT-B-32', pretrained='openai'
-    )
-    model.eval()
-    return model, preprocess
-
-model, preprocess = load_model()
-
-# 讀取圖片
-@st.cache_data
-def load_database_images():
-    image_folder = Path("images")
-    image_folder.mkdir(exist_ok=True)
-    paths = list(image_folder.glob("*.*"))
-    paths = [p for p in paths if p.suffix.lower() in [".jpg", ".jpeg", ".png"]]
+def load_images():
+    folder = Path("images")
+    folder.mkdir(exist_ok=True)
+    paths = [p for p in folder.glob("*.*") if p.suffix.lower() in [".jpg", ".jpeg", ".png"]]
     return paths
 
-db_paths = load_database_images()
+def pil_to_cv(img):
+    return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
+def find_objects(img, template, threshold=0.6):
+    """用模板匹配搵物件位置"""
+    img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    temp_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+    
+    result = cv2.matchTemplate(img_gray, temp_gray, cv2.TM_CCOEFF_NORMED)
+    locations = np.where(result >= threshold)
+    
+    points = []
+    for pt in zip(*locations[::-1]):
+        points.append(pt)
+    return points
+
+# 讀取資料庫圖片
+db_paths = load_images()
 if len(db_paths) == 0:
-    st.warning("請喺 images/ 資料夾放入圖片，然後重新部署。")
+    st.warning("請喺 images/ 放入圖片")
     st.stop()
 
-# 將圖片切成網格並計算每格 embedding
-def image_to_grid_embeddings(img, grid_size=4):
-    """將圖片切成 grid_size x grid_size 格，返回每格 embedding"""
-    w, h = img.size
-    cell_w, cell_h = w // grid_size, h // grid_size
-    embeddings = []
-    
-    for i in range(grid_size):
-        for j in range(grid_size):
-            left = j * cell_w
-            top = i * cell_h
-            right = left + cell_w
-            bottom = top + cell_h
-            cell = img.crop((left, top, right, bottom))
-            
-            cell_tensor = preprocess(cell).unsqueeze(0)
-            with torch.no_grad():
-                emb = model.encode_image(cell_tensor)
-                emb = emb / emb.norm(dim=-1, keepdim=True)
-            embeddings.append(emb.cpu().numpy())
-    
-    return np.vstack(embeddings)
+st.sidebar.header("設定")
+threshold = st.sidebar.slider("匹配門檻", 0.4, 0.9, 0.6, 0.05)
 
-# 計算資料庫所有圖片嘅網格 embedding
-@st.cache_data
-def compute_db_grid_embeddings(_model, _preprocess, paths, grid_size=4):
-    all_embeddings = []
-    for p in paths:
-        try:
-            img = Image.open(p).convert("RGB")
-            grid_emb = image_to_grid_embeddings(img, grid_size)
-            all_embeddings.append(grid_emb)
-        except Exception as e:
-            st.warning(f"跳過 {p.name}: {e}")
-    return all_embeddings
-
-grid_size = st.sidebar.slider("網格大小", 2, 6, 4, help="越大越準確但越慢")
-db_grid_embeddings = compute_db_grid_embeddings(model, preprocess, db_paths, grid_size)
-
-# 用戶上傳
-uploaded = st.file_uploader("上傳一張圖片搵相似圖", type=["jpg", "jpeg", "png"])
+uploaded = st.file_uploader("上傳查詢圖片", type=["jpg", "jpeg", "png"])
 
 if uploaded:
-    query_img = Image.open(uploaded).convert("RGB")
-    st.image(query_img, caption="你上傳嘅圖片", width=300)
+    query_pil = Image.open(uploaded).convert("RGB")
+    query_cv = pil_to_cv(query_pil)
+    st.image(query_pil, caption="查詢圖片", width=400)
     
-    query_grid_emb = image_to_grid_embeddings(query_img, grid_size)
+    # 用第一張資料庫圖片作為模板示範（實際可改成特定物件模板）
+    template_path = db_paths[0]
+    template_pil = Image.open(template_path).convert("RGB")
+    template_cv = pil_to_cv(template_pil)
     
-    # 計算每張資料庫圖片嘅相似度（所有格子平均）
-    similarities = []
-    for db_emb in db_grid_embeddings:
-        # 每格計算相似度，再取平均
-        cell_sims = np.sum(query_grid_emb * db_emb, axis=1)
-        avg_sim = np.mean(cell_sims)
-        similarities.append(avg_sim)
+    # 縮小模板（可選）
+    h, w = template_cv.shape[:2]
+    template_small = cv2.resize(template_cv, (w//4, h//4))
     
-    similarities = np.array(similarities)
-    top_k = st.slider("顯示幾多張相似圖", 1, min(12, len(db_paths)), 6)
-    top_indices = np.argsort(similarities)[::-1][:top_k]
+    query_points = find_objects(query_cv, template_small, threshold)
     
-    st.subheader(f"最相似嘅圖片（{grid_size}x{grid_size} 切格）")
+    st.write(f"查詢圖片搵到 {len(query_points)} 個匹配點")
+    
+    # 比較每張資料庫圖片
+    results = []
+    for path in db_paths:
+        try:
+            db_pil = Image.open(path).convert("RGB")
+            db_cv = pil_to_cv(db_pil)
+            db_points = find_objects(db_cv, template_small, threshold)
+            
+            # 簡單位置相似度：匹配點數量差異
+            score = 1.0 / (1.0 + abs(len(query_points) - len(db_points)))
+            results.append((path, score, len(db_points)))
+        except:
+            continue
+    
+    results.sort(key=lambda x: x[1], reverse=True)
+    
+    st.subheader("最相似圖片（按位置匹配）")
     cols = st.columns(3)
-    for i, idx in enumerate(top_indices):
+    for i, (path, score, count) in enumerate(results[:6]):
         with cols[i % 3]:
-            st.image(str(db_paths[idx]), caption=f"相似度: {similarities[idx]:.3f}")
+            st.image(str(path), caption=f"分數: {score:.2f} | 匹配點: {count}")
