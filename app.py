@@ -4,7 +4,7 @@ import imagehash
 from pathlib import Path
 
 st.set_page_config(page_title="相似圖片搜尋", layout="wide")
-st.title("🖼️ 相似圖片搜尋（感知哈希）")
+st.title("🖼️ 佢知，我知，單眼佬都知，得你唔知！")
 
 def load_images():
     folder = Path("images")
