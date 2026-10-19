@@ -1,60 +1,54 @@
 import streamlit as st
-import cv2
-import numpy as np
 from PIL import Image
 from pathlib import Path
+import json
 
-st.set_page_config(page_title="物品位置比對", layout="wide")
-st.title("📍 物品位置比對")
+st.set_page_config(page_title="物品搜尋", layout="wide")
+st.title("📍 物品搜尋")
+
+# 讀取描述
+desc_file = Path("descriptions.json")
+if desc_file.exists():
+    with open(desc_file, "r", encoding="utf-8") as f:
+        IMAGE_DATA = json.load(f)
+else:
+    IMAGE_DATA = {}
+    st.warning("搵唔到 descriptions.json")
 
 def load_images():
     folder = Path("images")
     folder.mkdir(exist_ok=True)
-    return [p for p in folder.glob("*.*") if p.suffix.lower() in [".jpg", ".jpeg", ".png"]]
-
-def pil_to_cv(img):
-    return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-
-def simple_match(img1, img2, threshold=0.3):
-    """簡單比較兩張圖嘅相似度"""
-    # 統一大小
-    img1 = cv2.resize(img1, (200, 200))
-    img2 = cv2.resize(img2, (200, 200))
-    
-    img1_gray = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
-    img2_gray = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
-    
-    # 計算差異
-    diff = cv2.absdiff(img1_gray, img2_gray)
-    score = 1.0 - (np.mean(diff) / 255.0)
-    return score
+    return list(folder.glob("*.png")) + list(folder.glob("*.jpg"))
 
 db_paths = load_images()
-if len(db_paths) == 0:
-    st.warning("請喺 images/ 放入圖片")
-    st.stop()
 
-uploaded = st.file_uploader("上傳查詢圖片", type=["jpg", "jpeg", "png"])
+# 搜尋表單
+st.sidebar.header("搜尋條件")
+dragon = st.sidebar.selectbox("龍頭方向", ["不限", "up", "down", "left", "right"])
+mask = st.sidebar.number_input("面具數量", 0, 5, 0)
 
-if uploaded:
-    query_pil = Image.open(uploaded).convert("RGB")
-    query_cv = pil_to_cv(query_pil)
-    st.image(query_pil, caption="查詢圖片", width=400)
-    
+if st.sidebar.button("搜尋"):
     results = []
     for path in db_paths:
-        try:
-            db_pil = Image.open(path).convert("RGB")
-            db_cv = pil_to_cv(db_pil)
-            score = simple_match(query_cv, db_cv)
-            results.append((path, score))
-        except Exception as e:
-            continue
+        data = IMAGE_DATA.get(path.name, {})
+        match = True
+        
+        if dragon != "不限" and data.get("dragon") != dragon:
+            match = False
+        if mask > 0 and data.get("mask", 0) != mask:
+            match = False
+        
+        if match:
+            results.append(path)
     
-    results.sort(key=lambda x: x[1], reverse=True)
-    
-    st.subheader("最相似圖片")
-    cols = st.columns(3)
-    for i, (path, score) in enumerate(results[:9]):
-        with cols[i % 3]:
-            st.image(str(path), caption=f"相似度: {score:.2f}")
+    st.subheader(f"搵到 {len(results)} 張")
+    if results:
+        cols = st.columns(3)
+        for i, p in enumerate(results[:12]):
+            with cols[i % 3]:
+                st.image(str(p), caption=p.name)
+    else:
+        st.info("冇結果")
+else:
+    st.info("請喺左邊輸入條件")
+    st.write(f"資料庫有 {len(IMAGE_DATA)} 筆描述")
