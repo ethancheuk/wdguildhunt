@@ -7,7 +7,7 @@ st.set_page_config(page_title="物品搜尋", layout="wide")
 st.title("📍 物品搜尋")
 
 # 讀取描述
-desc_file = Path("descriptions.json")
+desc_file = Path("description.json")
 if desc_file.exists():
     with open(desc_file, "r", encoding="utf-8") as f:
         data_list = json.load(f)
@@ -15,7 +15,7 @@ if desc_file.exists():
     IMAGE_DATA = {item["檔名"]: item for item in data_list}
 else:
     IMAGE_DATA = {}
-    st.warning("搵唔到 descriptions.json")
+    st.warning("搵唔到 description.json")
 
 def load_images():
     folder = Path("images")
