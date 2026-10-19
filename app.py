@@ -6,16 +6,14 @@ import json
 st.set_page_config(page_title="物品搜尋", layout="wide")
 st.title("📍 物品搜尋")
 
-# 讀取描述
-desc_file = Path("description.json")
+desc_file = Path("descriptions.json")
 if desc_file.exists():
     with open(desc_file, "r", encoding="utf-8") as f:
         data_list = json.load(f)
-    # 轉成以檔名為 key 嘅字典
     IMAGE_DATA = {item["檔名"]: item for item in data_list}
 else:
     IMAGE_DATA = {}
-    st.warning("搵唔到 description.json")
+    st.warning("搵唔到 descriptions.json")
 
 def load_images():
     folder = Path("images")
@@ -31,8 +29,10 @@ mask_count = st.sidebar.number_input("面具數量", 0, 2, 0)
 knife_count = st.sidebar.number_input("刀數量", 0, 1, 0)
 knife_dir = st.sidebar.selectbox("刀方向", ["不限", "up", "down", "left", "right"])
 shell_count = st.sidebar.number_input("貝殼數量", 0, 2, 0)
+
 crown_count = st.sidebar.number_input("王冠數量", 0, 2, 0)
-crown_dir = st.sidebar.selectbox("王冠方向", ["不限", "up", "down", "left", "right"])
+crown_dir = st.sidebar.selectbox("王冠方向（包含）", ["不限", "up", "down", "left", "right"])
+
 staff_count = st.sidebar.number_input("杖數量", 0, 1, 0)
 staff_dir = st.sidebar.selectbox("杖方向", ["不限", "up", "down", "left", "right"])
 hook_count = st.sidebar.number_input("鉤數量", 0, 1, 0)
@@ -57,10 +57,15 @@ if st.sidebar.button("搜尋"):
             match = False
         if shell_count > 0 and str(data.get("貝殼數量", "0")) != str(shell_count):
             match = False
-        if crown_count > 0 and str(data.get("王冠數量", "0")) != str(crown_count):
+        
+        # 王冠（逗號分隔）
+        crowns_str = data.get("王冠方向", "")
+        crowns = [c.strip() for c in crowns_str.split(",") if c.strip()] if crowns_str else []
+        if crown_count > 0 and len(crowns) != crown_count:
             match = False
-        if crown_dir != "不限" and data.get("王冠方向") != crown_dir:
+        if crown_dir != "不限" and crown_dir not in crowns:
             match = False
+        
         if staff_count > 0 and str(data.get("杖數量", "0")) != str(staff_count):
             match = False
         if staff_dir != "不限" and data.get("杖方向") != staff_dir:
