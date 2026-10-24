@@ -24,12 +24,22 @@ db_paths = load_images()
 
 st.sidebar.header("搜尋條件")
 
+# 龍頭（固定 1 個）
 dragon_dir = st.sidebar.selectbox("龍頭方向", ["不限", "up", "down", "left", "right"])
+
+# 面具
 mask_count = st.sidebar.number_input("面具數量", 0, 2, 0)
+
+# 刀
 knife_count = st.sidebar.number_input("刀數量", 0, 1, 0)
-knife_dir = st.sidebar.selectbox("刀方向", ["不限", "up", "down", "left", "right"])
+knife_dir = None
+if knife_count > 0:
+    knife_dir = st.sidebar.selectbox("刀方向", ["不限", "up", "down", "left", "right"])
+
+# 貝殼
 shell_count = st.sidebar.number_input("貝殼數量", 0, 2, 0)
 
+# 王冠
 crown_count = st.sidebar.number_input("王冠數量", 0, 2, 0)
 crown_dirs = []
 if crown_count >= 1:
@@ -39,12 +49,25 @@ if crown_count >= 2:
     crown_dir2 = st.sidebar.selectbox("王冠方向 2", ["不限", "up", "down", "left", "right"])
     crown_dirs.append(crown_dir2)
 
+# 杖
 staff_count = st.sidebar.number_input("杖數量", 0, 1, 0)
-staff_dir = st.sidebar.selectbox("杖方向", ["不限", "up", "down", "left", "right"])
+staff_dir = None
+if staff_count > 0:
+    staff_dir = st.sidebar.selectbox("杖方向", ["不限", "up", "down", "left", "right"])
+
+# 鉤
 hook_count = st.sidebar.number_input("鉤數量", 0, 1, 0)
-hook_dir = st.sidebar.selectbox("鉤方向", ["不限", "up", "down", "left", "right"])
+hook_dir = None
+if hook_count > 0:
+    hook_dir = st.sidebar.selectbox("鉤方向", ["不限", "up", "down", "left", "right"])
+
+# 天秤
 scale_count = st.sidebar.number_input("天秤數量", 0, 1, 0)
-scale_dir = st.sidebar.selectbox("天秤方向", ["不限", "up", "down", "left", "right"])
+scale_dir = None
+if scale_count > 0:
+    scale_dir = st.sidebar.selectbox("天秤方向", ["不限", "up", "down", "left", "right"])
+
+# 鑽石
 diamond_count = st.sidebar.number_input("鑽石數量", 0, 5, 0)
 
 if st.sidebar.button("搜尋"):
@@ -59,15 +82,14 @@ if st.sidebar.button("搜尋"):
             match = False
         if knife_count > 0 and str(data.get("刀數量", "0")) != str(knife_count):
             match = False
-        if knife_dir != "不限" and data.get("刀方向") != knife_dir:
+        if knife_dir and knife_dir != "不限" and data.get("刀方向") != knife_dir:
             match = False
         if shell_count > 0 and str(data.get("貝殼數量", "0")) != str(shell_count):
             match = False
         
-        # 王冠（精確匹配）
+        # 王冠
         crowns_str = data.get("王冠方向", "")
         crowns = [c.strip() for c in crowns_str.split(",") if c.strip()] if crowns_str else []
-        
         if crown_count > 0 and len(crowns) != crown_count:
             match = False
         else:
@@ -77,15 +99,15 @@ if st.sidebar.button("搜尋"):
         
         if staff_count > 0 and str(data.get("杖數量", "0")) != str(staff_count):
             match = False
-        if staff_dir != "不限" and data.get("杖方向") != staff_dir:
+        if staff_dir and staff_dir != "不限" and data.get("杖方向") != staff_dir:
             match = False
         if hook_count > 0 and str(data.get("鉤數量", "0")) != str(hook_count):
             match = False
-        if hook_dir != "不限" and data.get("鉤方向") != hook_dir:
+        if hook_dir and hook_dir != "不限" and data.get("鉤方向") != hook_dir:
             match = False
         if scale_count > 0 and str(data.get("天秤數量", "0")) != str(scale_count):
             match = False
-        if scale_dir != "不限" and data.get("天秤方向") != scale_dir:
+        if scale_dir and scale_dir != "不限" and data.get("天秤方向") != scale_dir:
             match = False
         if diamond_count > 0 and str(data.get("鑽石數量", "0")) != str(diamond_count):
             match = False
