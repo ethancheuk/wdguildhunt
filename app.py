@@ -30,7 +30,6 @@ knife_count = st.sidebar.number_input("刀數量", 0, 1, 0)
 knife_dir = st.sidebar.selectbox("刀方向", ["不限", "up", "down", "left", "right"])
 shell_count = st.sidebar.number_input("貝殼數量", 0, 2, 0)
 
-# 王冠（支援 2 個方向）
 crown_count = st.sidebar.number_input("王冠數量", 0, 2, 0)
 crown_dirs = []
 if crown_count >= 1:
@@ -65,13 +64,15 @@ if st.sidebar.button("搜尋"):
         if shell_count > 0 and str(data.get("貝殼數量", "0")) != str(shell_count):
             match = False
         
-        # 王冠
+        # 王冠（精確匹配）
         crowns_str = data.get("王冠方向", "")
         crowns = [c.strip() for c in crowns_str.split(",") if c.strip()] if crowns_str else []
+        
         if crown_count > 0 and len(crowns) != crown_count:
             match = False
-        for d in crown_dirs:
-            if d != "不限" and d not in crowns:
+        else:
+            selected_dirs = [d for d in crown_dirs if d != "不限"]
+            if selected_dirs and sorted(selected_dirs) != sorted(crowns):
                 match = False
         
         if staff_count > 0 and str(data.get("杖數量", "0")) != str(staff_count):
